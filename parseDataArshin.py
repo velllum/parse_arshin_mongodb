@@ -1,3 +1,4 @@
+import env
 import os
 
 import requests
@@ -5,19 +6,29 @@ from pymongo import MongoClient
 
 
 class ParseArshin:
+
     _PAGE_NUMBER = 1
     _PAGE_SIZE = 1000
-
-    _MONGO_CONNECTION = f"mongodb+srv://{os.environ.get('MONGO_LOGIN')}:{os.environ.get('MONGO_PASS')}@cluster0.fs8kg.mongodb" \
-                       f".net/{os.environ.get('MONGO_DB')}?retryWrites=true&w=majority "
+    _MONGO_CONNECTION = f"mongodb+srv://{os.getenv('MONGO_LOGIN')}:{os.getenv('MONGO_PASS')}@cluster0.fs8kg.mongodb" \
+                       f".net/{os.getenv('MONGO_DB')}?retryWrites=true&w=majority"
 
     def __init__(self):
         self._client = MongoClient(ParseArshin._MONGO_CONNECTION)
-        self._db = self._client.metrolog
+        self.db = self._client.metrolog
         self._response = None
+        self.list_items = None
         self._headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36"
         }
+
+    @property
+    def page_number(self):
+        """
+        - Вернет количество пройденных страниц
+
+        :return:
+        """
+        return ParseArshin._PAGE_NUMBER
 
     def _get_respose(self):
         """
@@ -32,7 +43,7 @@ class ParseArshin:
                 "pageSize": ParseArshin._PAGE_SIZE,
                 "orgID": "CURRENT_ORG",
             }
-            response = session.get(url=os.environ.get("URL"))
+            response = session.get(url=os.getenv("URL"))
             if response.ok:
                 self._response = response
             else:
@@ -44,16 +55,10 @@ class ParseArshin:
 
         :return: None
         """
-
-        self.list_data = self._response.json()["result"]["items"]
-
-        while True:
-            try:
-                if not self.list_data:
-                    break
-                self._db.dataArshin.insert_many(self.list_data)
-            except Exception as e:
-                print(f"Произошла ошибка {e}")
+        try:
+            self.db.dataArshin.insert_many(self.list_items["result"]["items"])
+        except Exception as e:
+            print(f"Произошла ошибка {e}")
 
     def remove_data(self):
         """
@@ -61,10 +66,23 @@ class ParseArshin:
 
         :return: None
         """
+        self.db.dataArshin.delete_many({})
 
-        self._db.dataArshin.count_documents({})
-        self._db.dataArshin.remove()
-        self._db.dataArshin.count()
+    def get_all_flelds(self):
+        """
+        - Вывод данных
+
+        :return:
+        """
+        return self.db.dataArshin.find({}, {"_id": 0})
+
+    def get_count_fields(self):
+        """
+        - Получить количество всех записей в базе
+
+        :return:
+        """
+        return self.db.dataArshin.count_documents({})
 
     def coll_data(self):
         """
@@ -72,20 +90,30 @@ class ParseArshin:
 
         :return: None
         """
-        # self._get_respose()
-        # self._seve_data()
-        #
-        # ParseArshin._PAGE_NUMBER += 1
+        self._get_respose()
+        self.list_items = self._response.json()
 
-        print(self._db.dataArshin.find({}))
+        if not self.list_items["result"]["items"]:
+            print("Массив пуст")
+            return False
 
-        for i in self._db.dataArshin.find({}):
-            print(i)
+        self._seve_data()
 
-
+        ParseArshin._PAGE_NUMBER += 1
 
 
 if __name__ == '__main__':
     parse = ParseArshin()
+
     # parse.remove_data()
-    parse.coll_data()
+    # while True:
+    #     print(f"{parse.page_number} | {parse.page_number*1000}")
+    #     if parse.coll_data() is False:
+    #         break
+
+    # for en, dic in enumerate(parse.get_all_flelds(), 1):
+    #     # print(en, dic["properties"][1]["value"])
+    #     print(en, dic["properties"][1]["value"])
+
+    for i in parse.db.dataArshin.find({"properties.4.value": "37049-08"}):
+        print(i)
