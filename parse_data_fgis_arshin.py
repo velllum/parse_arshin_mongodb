@@ -1,4 +1,5 @@
 import datetime
+import os
 
 import pymongo
 import requests
@@ -12,7 +13,8 @@ BASE_URL = 'https://fgis.gost.ru/fundmetrology/api/registry/4/data'
 TOTAL_LINK = f'{BASE_URL}?pageNumber=1&pageSize=1&orgID=CURRENT_ORG'
 LINK = f'{BASE_URL}?pageNumber={NUM}&pageSize=1000&orgID=CURRENT_ORG'
 
-CLIENT = pymongo.MongoClient("mongodb+srv://velllum:0sxfeDlou9i66twP@cluster0.fs8kg.mongodb.net/metrolog?retryWrites=true&w=majority")
+mongo_url = f"mongodb+srv://{os.environ.get('MONGO_LOGIN')}:{os.environ.get('MONGO_PASS')}@cluster0.fs8kg.mongodb.net/{os.environ.get('MONGO_DB')}?retryWrites=true&w=majority"
+CLIENT = pymongo.MongoClient(mongo_url)
 
 
 # получаем значение по урлу
@@ -53,6 +55,13 @@ def main():
 
     for item in cursor:
         print(item)
+
+    print("element")
+
+    element = db.dataBaseArshin.find({}, {"properties":[{"value"}]})
+
+    for i in element:
+        print(i)
 
 
 if __name__ == '__main__':
