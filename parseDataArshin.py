@@ -9,17 +9,21 @@ class ParseArshin:
 
     _PAGE_NUMBER = 1
     _PAGE_SIZE = 1000
-    _MONGO_CONNECTION = f"mongodb+srv://{os.getenv('MONGO_LOGIN')}:{os.getenv('MONGO_PASS')}@cluster0.fs8kg.mongodb" \
-                       f".net/{os.getenv('MONGO_DB')}?retryWrites=true&w=majority"
+    # _MONGO_CONNECTION = f"mongodb+srv://{os.getenv('MONGO_LOGIN')}:{os.getenv('MONGO_PASS')}@cluster0.fs8kg.mongodb.net/{os.getenv('MONGO_DB')}?retryWrites=true&w=majority"
+    _MONGO_CONNECTION = ('localhost', 27017)
+
 
     def __init__(self):
-        self._client = MongoClient(ParseArshin._MONGO_CONNECTION)
-        self.db = self._client.metrolog
+        print(ParseArshin._MONGO_CONNECTION)
+        self._client = MongoClient(*ParseArshin._MONGO_CONNECTION)
+        self.db = self._client.metrolog.ParseArshin
         self._response = None
         self.list_items = None
         self._headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36"
         }
+
+
 
     @property
     def page_number(self):
@@ -29,6 +33,8 @@ class ParseArshin:
         :return:
         """
         return ParseArshin._PAGE_NUMBER
+
+
 
     def _get_respose(self):
         """
@@ -49,16 +55,20 @@ class ParseArshin:
             else:
                 print('ОШИБКА - 404')
 
-    def _seve_data(self):
+
+
+    def _save_data(self):
         """
         - Сохраняет собранные данные в удаленную базу mongodb
 
         :return: None
         """
         try:
-            self.db.dataArshin.insert_many(self.list_items["result"]["items"])
+            self.db.insert_many(self.list_items["result"]["items"])
         except Exception as e:
             print(f"Произошла ошибка {e}")
+
+
 
     def remove_data(self):
         """
@@ -66,54 +76,39 @@ class ParseArshin:
 
         :return: None
         """
-        self.db.dataArshin.delete_many({})
+        self.db.delete_many({})
 
-    def get_all_flelds(self):
-        """
-        - Вывод данных
 
-        :return:
-        """
-        return self.db.dataArshin.find({}, {"_id": 0})
 
-    def get_count_fields(self):
-        """
-        - Получить количество всех записей в базе
-
-        :return:
-        """
-        return self.db.dataArshin.count_documents({})
-
-    def coll_data(self):
+    def run(self):
         """
         - Метод старта программ
 
         :return: None
         """
-        self._get_respose()
-        self.list_items = self._response.json()
+        while True:
+            self._get_respose()
+            self.list_items = self._response.json()
 
-        if not self.list_items["result"]["items"]:
-            print("Массив пуст")
-            return False
+            if not self.list_items["result"]["items"]:
+                print(f"Загрузка закончена, собранное количество {self.db.count_documents({})}")
+                break
 
-        self._seve_data()
+            self._save_data()
+            ParseArshin._PAGE_NUMBER += 1
 
-        ParseArshin._PAGE_NUMBER += 1
+
+    def __str__(self):
+        return print(f"{self.list_items} | {self.list_items*1000}")
 
 
 if __name__ == '__main__':
     parse = ParseArshin()
-
     # parse.remove_data()
-    # while True:
-    #     print(f"{parse.page_number} | {parse.page_number*1000}")
-    #     if parse.coll_data() is False:
-    #         break
+    # parse.run()
 
-    # for en, dic in enumerate(parse.get_all_flelds(), 1):
-    #     # print(en, dic["properties"][1]["value"])
-    #     print(en, dic["properties"][1]["value"])
+    for e, field in enumerate(parse.db.find({"properties.2.value": "37049-08"}, {"_id": 0}), 1):
+        print(e, field["properties"][1]["value"],   field["properties"][10]["value"][0], field["properties"][4]["value"])
 
-    for i in parse.db.dataArshin.find({"properties.4.value": "37049-08"}):
-        print(i)
+
+
