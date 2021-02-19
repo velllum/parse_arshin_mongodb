@@ -12,11 +12,11 @@ class ParseArshin:
     # _MONGO_CONNECTION = f"mongodb+srv://{os.getenv('MONGO_LOGIN')}:{os.getenv('MONGO_PASS')}@cluster0.fs8kg.mongodb.net/{os.getenv('MONGO_DB')}?retryWrites=true&w=majority"
     _MONGO_CONNECTION = ('localhost', 27017)
 
+    print(_MONGO_CONNECTION)
 
     def __init__(self):
-        print(ParseArshin._MONGO_CONNECTION)
         self._client = MongoClient(*ParseArshin._MONGO_CONNECTION)
-        self.db = self._client.metrolog.ParseArshin
+        self.db = self._client.metrolog[os.getenv("MONGO_COLL")]
         self._response = None
         self.list_items = None
         self._headers = {
@@ -107,8 +107,6 @@ if __name__ == '__main__':
     # parse.remove_data()
     # parse.run()
 
-    for e, field in enumerate(parse.db.find({"properties.2.value": "37049-08"}, {"_id": 0}), 1):
-        print(e, field["properties"][1]["value"],   field["properties"][10]["value"][0], field["properties"][4]["value"])
-
-
-
+    for e, field in enumerate(parse.db.find({"properties.value": "37049-08"}, {"_id": 0}), 1):
+        # print(e, field["properties"][1]["value"],   field["properties"][10]["value"][0], field["properties"][4]["value"])
+        print(e, )
